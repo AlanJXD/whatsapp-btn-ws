@@ -1,0 +1,706 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>WhatsApp Generator · Live</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --green:      #25D366;
+      --green-dark: #128C7E;
+      --green-glow: rgba(37,211,102,.22);
+      --ink:        #0d1117;
+      --ink-2:      #1e2530;
+      --muted:      #6b7280;
+      --border:     #e5e7eb;
+      --surface:    #ffffff;
+      --bg:         #f4f6f9;
+      --radius:     14px;
+      --shadow-lg:  0 8px 32px rgba(0,0,0,.12), 0 2px 8px rgba(0,0,0,.06);
+    }
+
+    body {
+      font-family: 'Syne', sans-serif;
+      background: var(--bg);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 40px 16px 80px;
+      color: var(--ink);
+    }
+
+    /* ── Status bar ─────────────────────────────── */
+    .status-bar {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 100px;
+      padding: 7px 18px;
+      font-family: 'DM Mono', monospace;
+      font-size: 12px;
+      color: var(--muted);
+      margin-bottom: 32px;
+      box-shadow: 0 1px 4px rgba(0,0,0,.06);
+    }
+
+    .status-item { display: flex; align-items: center; gap: 7px; }
+
+    .dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: #dc2626;
+      transition: background .3s;
+      flex-shrink: 0;
+    }
+    .dot.connected { background: var(--green); box-shadow: 0 0 6px var(--green-glow); }
+
+    .sep { width: 1px; height: 14px; background: var(--border); }
+
+    /* ── Header ─────────────────────────────────── */
+    .header { text-align: center; margin-bottom: 32px; }
+
+    .logo-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--green);
+      color: #fff;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      padding: 5px 14px;
+      border-radius: 100px;
+      margin-bottom: 18px;
+    }
+    .logo-chip svg { width: 15px; height: 15px; }
+
+    h1 {
+      font-size: clamp(1.8rem, 5vw, 2.8rem);
+      font-weight: 800;
+      line-height: 1.1;
+      letter-spacing: -.025em;
+    }
+    h1 span { color: var(--green); }
+
+    .subtitle {
+      margin-top: 8px;
+      font-size: 13px;
+      font-family: 'DM Mono', monospace;
+      color: var(--muted);
+    }
+
+    /* ── Card ───────────────────────────────────── */
+    .card {
+      background: var(--surface);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-lg);
+      padding: 32px 32px 28px;
+      width: 100%;
+      max-width: 600px;
+      border: 1px solid var(--border);
+    }
+
+    /* ── Field ──────────────────────────────────── */
+    .field { margin-bottom: 20px; }
+
+    .field-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+
+    label {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: .09em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .typing-badge {
+      display: none;
+      align-items: center;
+      gap: 5px;
+      font-family: 'DM Mono', monospace;
+      font-size: 11px;
+      font-style: italic;
+      color: var(--green-dark);
+      animation: pulse 1.4s ease infinite;
+    }
+    .typing-badge.visible { display: flex; }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50%       { opacity: .45; }
+    }
+
+    .typing-dots { display: flex; gap: 3px; }
+    .typing-dots span {
+      width: 4px; height: 4px;
+      border-radius: 50%;
+      background: var(--green);
+      animation: bounce 1.2s ease infinite;
+    }
+    .typing-dots span:nth-child(2) { animation-delay: .15s; }
+    .typing-dots span:nth-child(3) { animation-delay: .3s; }
+
+    @keyframes bounce {
+      0%, 60%, 100% { transform: translateY(0); }
+      30%            { transform: translateY(-4px); }
+    }
+
+    .input-wrap { position: relative; }
+
+    .input-icon {
+      position: absolute;
+      left: 13px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--muted);
+      pointer-events: none;
+    }
+
+    input[type="text"],
+    textarea {
+      width: 100%;
+      font-family: 'DM Mono', monospace;
+      font-size: 14px;
+      color: var(--ink);
+      background: var(--bg);
+      border: 1.5px solid var(--border);
+      border-radius: 10px;
+      padding: 12px 13px 12px 40px;
+      outline: none;
+      transition: border-color .2s, box-shadow .2s, background .2s;
+    }
+
+    textarea {
+      padding-left: 13px;
+      min-height: 200px;
+      resize: vertical;
+      line-height: 1.65;
+    }
+
+    input[type="text"]:focus,
+    textarea:focus {
+      border-color: var(--green);
+      background: #fff;
+      box-shadow: 0 0 0 3px var(--green-glow);
+    }
+
+    /* Remote edit flash */
+    @keyframes remotePulse {
+      0%   { box-shadow: 0 0 0 3px rgba(37,211,102,.5); }
+      100% { box-shadow: 0 0 0 3px rgba(37,211,102,0);  }
+    }
+    .remote-flash {
+      animation: remotePulse .6s ease-out !important;
+      border-color: var(--green) !important;
+      background: #f0fdf4 !important;
+    }
+
+    input::placeholder, textarea::placeholder { color: #b0b8c4; }
+
+    .field-footer {
+      display: flex;
+      justify-content: flex-end;
+      margin-top: 5px;
+    }
+    .char-count {
+      font-size: 11px;
+      font-family: 'DM Mono', monospace;
+      color: var(--muted);
+    }
+
+    /* ── Generate button ─────────────────────────── */
+    .btn-generate {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 9px;
+      padding: 14px 24px;
+      background: var(--ink);
+      color: #fff;
+      font-family: 'Syne', sans-serif;
+      font-size: 15px;
+      font-weight: 700;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: background .2s, transform .15s, box-shadow .2s;
+      margin-top: 4px;
+    }
+    .btn-generate:hover {
+      background: var(--ink-2);
+      box-shadow: 0 4px 16px rgba(0,0,0,.18);
+      transform: translateY(-1px);
+    }
+    .btn-generate:active { transform: translateY(0); }
+    .btn-generate svg { width: 17px; height: 17px; }
+
+    /* ── Divider ────────────────────────────────── */
+    .divider {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin: 24px 0 20px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .4s;
+    }
+    .divider.visible { opacity: 1; pointer-events: auto; }
+    .divider-line { flex: 1; height: 1px; background: var(--border); }
+    .divider-label {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    /* ── Result ─────────────────────────────────── */
+    .result {
+      display: none;
+      flex-direction: column;
+      gap: 11px;
+      animation: slideUp .35s cubic-bezier(.22,.68,0,1.2) both;
+    }
+    .result.visible { display: flex; }
+
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateY(14px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* WhatsApp button */
+    .btn-whatsapp {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      padding: 14px 24px;
+      background: var(--green);
+      color: #fff;
+      font-family: 'Syne', sans-serif;
+      font-size: 15px;
+      font-weight: 700;
+      text-decoration: none;
+      border-radius: 10px;
+      transition: background .2s, transform .15s, box-shadow .2s;
+      box-shadow: 0 4px 14px var(--green-glow);
+    }
+    .btn-whatsapp:hover {
+      background: #1ebe5b;
+      transform: translateY(-1px);
+      box-shadow: 0 6px 20px rgba(37,211,102,.45);
+    }
+    .btn-whatsapp:active { transform: translateY(0); }
+    .btn-whatsapp svg { width: 20px; height: 20px; flex-shrink: 0; }
+
+    /* Copy row */
+    .copy-row { display: flex; gap: 9px; align-items: stretch; }
+
+    .link-preview {
+      flex: 1;
+      font-family: 'DM Mono', monospace;
+      font-size: 12px;
+      color: var(--muted);
+      background: var(--bg);
+      border: 1.5px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 13px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      user-select: all;
+    }
+
+    .btn-copy {
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      padding: 10px 16px;
+      background: var(--surface);
+      color: var(--ink);
+      font-family: 'Syne', sans-serif;
+      font-size: 13px;
+      font-weight: 700;
+      border: 1.5px solid var(--border);
+      border-radius: 10px;
+      cursor: pointer;
+      transition: background .15s, border-color .15s, color .15s;
+      white-space: nowrap;
+    }
+    .btn-copy:hover { background: var(--ink); color: #fff; border-color: var(--ink); }
+    .btn-copy.copied {
+      background: #dcfce7;
+      color: var(--green-dark);
+      border-color: var(--green);
+    }
+    .btn-copy svg { width: 14px; height: 14px; }
+
+    .note {
+      font-size: 12px;
+      font-family: 'DM Mono', monospace;
+      color: #92400e;
+      padding: 10px 13px;
+      background: #fffbeb;
+      border: 1px solid #fde68a;
+      border-radius: 8px;
+      line-height: 1.55;
+    }
+
+    /* Errors */
+    .error-msg {
+      display: none;
+      font-size: 11px;
+      font-family: 'DM Mono', monospace;
+      color: #dc2626;
+      margin-top: 5px;
+    }
+    .error-msg.visible { display: block; }
+    input.error, textarea.error {
+      border-color: #dc2626 !important;
+      box-shadow: 0 0 0 3px rgba(220,38,38,.12) !important;
+    }
+
+    /* ── Footer ─────────────────────────────────── */
+    .footer {
+      margin-top: 28px;
+      font-size: 11px;
+      font-family: 'DM Mono', monospace;
+      color: #9ca3af;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Status bar -->
+  <div class="status-bar">
+    <div class="status-item">
+      <div class="dot" id="conn-dot"></div>
+      <span id="conn-label">Conectando…</span>
+    </div>
+    <div class="sep"></div>
+    <div class="status-item">
+      <!-- users icon -->
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+        <circle cx="9" cy="7" r="4"/>
+        <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+        <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+      </svg>
+      <span id="client-count">— usuarios</span>
+    </div>
+  </div>
+
+  <header class="header">
+    <div class="logo-chip">
+      <svg viewBox="0 0 24 24" fill="currentColor">
+        <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/>
+        <path d="M12 0C5.373 0 0 5.373 0 12c0 2.127.558 4.122 1.532 5.855L.057 23.882l6.186-1.623A11.945 11.945 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.894a9.893 9.893 0 01-5.017-1.366l-.36-.213-3.732.979 1-3.635-.234-.373A9.861 9.861 0 012.106 12C2.106 6.536 6.536 2.106 12 2.106S21.894 6.536 21.894 12 17.464 21.894 12 21.894z"/>
+      </svg>
+      Live · WebSocket
+    </div>
+    <h1>Generador de links<br>de <span>WhatsApp</span></h1>
+    <p class="subtitle">// los cambios se sincronizan en tiempo real</p>
+  </header>
+
+  <div class="card">
+
+    <!-- Phone -->
+    <div class="field">
+      <div class="field-header">
+        <label for="phone">Número de teléfono</label>
+        <div class="typing-badge" id="typing-phone">
+          <div class="typing-dots"><span></span><span></span><span></span></div>
+          editando…
+        </div>
+      </div>
+      <div class="input-wrap">
+        <span class="input-icon">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.81a19.79 19.79 0 01-3.07-8.68A2 2 0 012.18 1h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.91 8.15a16 16 0 006.95 6.95l1.51-1.51a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/>
+          </svg>
+        </span>
+        <input type="text" id="phone" placeholder="Ej: 5491112345678" autocomplete="off" />
+      </div>
+      <span class="error-msg" id="phone-error">Ingresá un número válido (solo dígitos).</span>
+    </div>
+
+    <!-- Message -->
+    <div class="field">
+      <div class="field-header">
+        <label for="message">Mensaje</label>
+        <div class="typing-badge" id="typing-message">
+          <div class="typing-dots"><span></span><span></span><span></span></div>
+          editando…
+        </div>
+      </div>
+      <textarea id="message" placeholder="Escribí acá tu mensaje completo. Se enviará exactamente como lo escribís, incluyendo saltos de línea y caracteres especiales."></textarea>
+      <div class="field-footer">
+        <span class="char-count"><span id="char-count">0</span> caracteres</span>
+      </div>
+      <span class="error-msg" id="msg-error">El mensaje no puede estar vacío.</span>
+    </div>
+
+    <!-- Generate -->
+    <button class="btn-generate" onclick="generate()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+      </svg>
+      Generar botón
+    </button>
+
+    <!-- Divider -->
+    <div class="divider" id="divider">
+      <div class="divider-line"></div>
+      <span class="divider-label">Resultado</span>
+      <div class="divider-line"></div>
+    </div>
+
+    <!-- Result -->
+    <div class="result" id="result">
+
+      <a class="btn-whatsapp" id="wa-link" href="#" target="_blank" rel="noopener noreferrer">
+        <svg viewBox="0 0 24 24" fill="currentColor">
+          <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/>
+          <path d="M12 0C5.373 0 0 5.373 0 12c0 2.127.558 4.122 1.532 5.855L.057 23.882l6.186-1.623A11.945 11.945 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.894a9.893 9.893 0 01-5.017-1.366l-.36-.213-3.732.979 1-3.635-.234-.373A9.861 9.861 0 012.106 12C2.106 6.536 6.536 2.106 12 2.106S21.894 6.536 21.894 12 17.464 21.894 12 21.894z"/>
+        </svg>
+        Enviar por WhatsApp
+      </a>
+
+      <div class="copy-row">
+        <div class="link-preview" id="link-preview"></div>
+        <button class="btn-copy" id="btn-copy" onclick="copyLink()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+            <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>
+          </svg>
+          <span id="copy-text">Copiar enlace</span>
+        </button>
+      </div>
+
+      <div class="note">
+        ⚠️ Los mensajes muy largos pueden ser truncados por WhatsApp Web. Si eso ocurre, pegá el texto directamente en el chat.
+      </div>
+
+    </div>
+  </div>
+
+  <div class="footer">WebSocket · sin servidores externos · datos solo en memoria</div>
+
+  <script>
+    // ── DOM refs ──────────────────────────────────────────────────────────────
+    const phoneEl      = document.getElementById('phone');
+    const msgEl        = document.getElementById('message');
+    const charCountEl  = document.getElementById('char-count');
+    const resultEl     = document.getElementById('result');
+    const dividerEl    = document.getElementById('divider');
+    const waLink       = document.getElementById('wa-link');
+    const linkPreview  = document.getElementById('link-preview');
+    const connDot      = document.getElementById('conn-dot');
+    const connLabel    = document.getElementById('conn-label');
+    const clientCount  = document.getElementById('client-count');
+    const typingPhone  = document.getElementById('typing-phone');
+    const typingMsg    = document.getElementById('typing-message');
+    const phoneError   = document.getElementById('phone-error');
+    const msgError     = document.getElementById('msg-error');
+
+    // ── WebSocket ─────────────────────────────────────────────────────────────
+    let ws = null;
+    let reconnectTimer = null;
+
+    function connect() {
+      const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+      ws = new WebSocket(`${proto}://${location.host}`);
+
+      ws.onopen = () => {
+        connDot.classList.add('connected');
+        connLabel.textContent = 'Conectado';
+        clearTimeout(reconnectTimer);
+      };
+
+      ws.onclose = () => {
+        connDot.classList.remove('connected');
+        connLabel.textContent = 'Desconectado — reconectando…';
+        reconnectTimer = setTimeout(connect, 3000);
+      };
+
+      ws.onerror = () => ws.close();
+
+      ws.onmessage = ({ data }) => {
+        let msg;
+        try { msg = JSON.parse(data); } catch { return; }
+        handleMessage(msg);
+      };
+    }
+
+    function send(obj) {
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify(obj));
+      }
+    }
+
+    // ── Message router ────────────────────────────────────────────────────────
+    function handleMessage(msg) {
+      switch (msg.type) {
+
+        case 'init':
+          setField('phone',   msg.state.phone,   false);
+          setField('message', msg.state.message, false);
+          updateCount(msg.clientCount);
+          break;
+
+        case 'input_change':
+          setField(msg.field, msg.value, true /* flash */);
+          break;
+
+        case 'client_count':
+          updateCount(msg.count);
+          break;
+
+        case 'typing_start':
+          if (msg.field === 'phone')   typingPhone.classList.add('visible');
+          if (msg.field === 'message') typingMsg.classList.add('visible');
+          break;
+
+        case 'typing_stop':
+          if (msg.field === 'phone')   typingPhone.classList.remove('visible');
+          if (msg.field === 'message') typingMsg.classList.remove('visible');
+          break;
+      }
+    }
+
+    // Set an input value from a remote update (no re-broadcast)
+    function setField(field, value, flash) {
+      const el = field === 'phone' ? phoneEl : msgEl;
+      el.value = value;
+      if (field === 'message') charCountEl.textContent = value.length;
+      updateLink();
+      if (flash) flashRemote(el);
+    }
+
+    function flashRemote(el) {
+      el.classList.remove('remote-flash');
+      void el.offsetWidth;               // force reflow
+      el.classList.add('remote-flash');
+      setTimeout(() => el.classList.remove('remote-flash'), 700);
+    }
+
+    function updateCount(n) {
+      clientCount.textContent = `${n} usuario${n !== 1 ? 's' : ''}`;
+    }
+
+    // ── Typing detection ──────────────────────────────────────────────────────
+    const typingTimers = {};
+
+    function onTypingStart(field) {
+      if (!typingTimers[field]) {
+        send({ type: 'typing_start', field });
+      }
+      clearTimeout(typingTimers[field]);
+      typingTimers[field] = setTimeout(() => {
+        send({ type: 'typing_stop', field });
+        typingTimers[field] = null;
+      }, 1500);
+    }
+
+    // ── Local input events ────────────────────────────────────────────────────
+    phoneEl.addEventListener('input', () => {
+      charCountEl.textContent = msgEl.value.length;
+      send({ type: 'input_change', field: 'phone', value: phoneEl.value });
+      onTypingStart('phone');
+      updateLink();
+    });
+
+    msgEl.addEventListener('input', () => {
+      charCountEl.textContent = msgEl.value.length;
+      send({ type: 'input_change', field: 'message', value: msgEl.value });
+      onTypingStart('message');
+      updateLink();
+    });
+
+    phoneEl.addEventListener('keydown', e => {
+      if (e.key === 'Enter') { e.preventDefault(); msgEl.focus(); }
+    });
+
+    // ── Link generation ───────────────────────────────────────────────────────
+    function updateLink() {
+      const phone = phoneEl.value.replace(/[\s\-\+]/g, '');
+      const msg   = msgEl.value;
+      if (!phone || !msg.trim()) return;
+      const url = `https://wa.me/${phone}?text=${encodeURIComponent(msg)}`;
+      waLink.href = url;
+      linkPreview.textContent = url;
+      linkPreview.title = url;
+    }
+
+    function validate() {
+      let ok = true;
+      const phone = phoneEl.value.replace(/[\s\-\+]/g, '');
+      if (!phone || !/^\d+$/.test(phone)) {
+        phoneEl.classList.add('error');
+        phoneError.classList.add('visible');
+        ok = false;
+      } else {
+        phoneEl.classList.remove('error');
+        phoneError.classList.remove('visible');
+      }
+      if (!msgEl.value.trim()) {
+        msgEl.classList.add('error');
+        msgError.classList.add('visible');
+        ok = false;
+      } else {
+        msgEl.classList.remove('error');
+        msgError.classList.remove('visible');
+      }
+      return ok;
+    }
+
+    function generate() {
+      if (!validate()) return;
+      updateLink();
+      dividerEl.classList.add('visible');
+      resultEl.classList.remove('visible');
+      void resultEl.offsetWidth;
+      resultEl.classList.add('visible');
+    }
+
+    function copyLink() {
+      const url = waLink.href;
+      const btn = document.getElementById('btn-copy');
+      const txt = document.getElementById('copy-text');
+      navigator.clipboard.writeText(url).catch(() => {
+        const ta = Object.assign(document.createElement('textarea'), {
+          value: url, style: 'position:fixed;opacity:0'
+        });
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+      }).finally(() => {
+        btn.classList.add('copied');
+        txt.textContent = '¡Copiado!';
+        setTimeout(() => { btn.classList.remove('copied'); txt.textContent = 'Copiar enlace'; }, 2000);
+      });
+    }
+
+    // ── Boot ──────────────────────────────────────────────────────────────────
+    connect();
+  </script>
+</body>
+</html>
